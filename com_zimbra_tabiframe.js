@@ -30,59 +30,56 @@ function com_zimbra_tabiframe_HandlerObject() {
 com_zimbra_tabiframe_HandlerObject.prototype = new ZmZimletBase();
 com_zimbra_tabiframe_HandlerObject.prototype.constructor = com_zimbra_tabiframe_HandlerObject;
 
-var tabLabel = "SecureMail.vn";
-var url = "https://www.securemail.vn"; //Should be HTTPS to avoid mixed content issue.
-var tabDesc = "Open tab to view page: " + url;
-
 /**
  * This method gets called by the Zimlet framework when the zimlet loads.
  *  
  */
-com_zimbra_tabiframe_HandlerObject.prototype.init =
-function() {
-
-	this._simpleAppName = this.createApp(tabLabel, "zimbraIcon", tabDesc);
-
+com_zimbra_tabiframe_HandlerObject.prototype.init = function() {
+    this.url = this.getZimletContext().getConfig('tab-url');
+    var label = this.getZimletContext().getConfig('tab-label');
+    var desc = AjxMessageFormat.format(this.getMessage('tab-description'), this.url);
+    this._simpleAppName = this.createApp(label, 'zimbraIcon', desc);
 };
 
 /**
  * This method gets called by the Zimlet framework each time the application is opened or closed.
  *  
- * @param	{String}	appName		the application name
- * @param	{Boolean}	active		if true, the application status is open; otherwise, false
+ * @param   {String}    appName     the application name
+ * @param   {Boolean}   active      if true, the application status is open; otherwise, false
  */
-com_zimbra_tabiframe_HandlerObject.prototype.appActive =
-function(appName, active) {
-	
-	switch (appName) {
-		case this._simpleAppName: {
-		
-			var app = appCtxt.getApp(appName); // get access to ZmZimletApp
-
-			break;
-		}
-	}
-	
+com_zimbra_tabiframe_HandlerObject.prototype.appActive = function(appName, active) {
+    switch (appName) {
+        case this._simpleAppName: {
+            var app = appCtxt.getApp(appName); // get access to ZmZimletApp
+            break;
+        }
+    }
 };
 
 /**
  * This method gets called by the Zimlet framework when the application is opened for the first time.
  *  
- * @param	{String}	appName		the application name		
+ * @param   {String}    appName     the application name        
  */
-com_zimbra_tabiframe_HandlerObject.prototype.appLaunch =
-function(appName) {
+com_zimbra_tabiframe_HandlerObject.prototype.appLaunch = function(appName) {
+    switch (appName) {
+        case this._simpleAppName: {
+            var queryStr = AjxStringUtil.queryStringSet({
+                'account': this.getAccountAddress().getAddress()
+            });
+            var url = [this.url, queryStr].join('');
+            var app = appCtxt.getApp(appName); // get access to ZmZimletApp
+            app.setContent("<iframe id=\"tabiframe-app\" name=\"tabiframe-app\" src=" + url + " width=\"100%\" height=\"100%\" /></iframe>"); // write HTML to app
+            break;
+        }
+    }
+};
 
-	switch (appName) {
-		case this._simpleAppName: {
-			// do something
-		
-			var app = appCtxt.getApp(appName); // get access to ZmZimletApp
+com_zimbra_tabiframe_HandlerObject.prototype.getAccountAddress = function() {
+    var account = (appCtxt.accountList.defaultAccount ||
+                   appCtxt.accountList.activeAccount ||
+                   appCtxt.accountList.mainAccount);
+    var identity = appCtxt.getIdentityCollection(account).defaultIdentity;
 
-			app.setContent("<iframe id=\"tabiframe-app\" name=\"tabiframe-app\" src=" + url + " width=\"100%\" height=\"100%\" /></iframe>"); // write HTML to app
-
-			break;
-		}
-	}
-
+    return new AjxEmailAddress(identity.sendFromAddress, AjxEmailAddress.FROM, identity.sendFromDisplay);
 };
